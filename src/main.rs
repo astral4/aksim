@@ -1,7 +1,5 @@
 #![feature(generic_const_exprs)]
 
-use core::any::Any;
-
 type Float = f32;
 
 #[rustfmt::skip]
@@ -20,7 +18,7 @@ const SIX_STAR_RATES: [Float; 98] = [
 
 fn banner<const TARGET: usize, const PULLS: usize>(subrate: Float) -> [Float; PULLS]
 where
-    [(); TARGET + 1]: Any, // ?
+    [(); TARGET + 1]:, // generic const exprs need a `where` bound
 {
     let mut pdist = [0.; PULLS];
 
