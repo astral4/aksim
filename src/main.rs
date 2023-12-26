@@ -1,5 +1,7 @@
 #![feature(generic_const_exprs)]
 
+use arrayvec::ArrayVec;
+
 type Float = f32;
 
 #[rustfmt::skip]
@@ -45,19 +47,23 @@ where
     pdist
 }
 
-fn main() {
-    let pdist = banner::<1, 100>(0.5);
-    let cumsum: Vec<Float> = pdist
-        .into_iter()
+fn cumsum<const LEN: usize>(arr: [Float; LEN]) -> ArrayVec<Float, LEN> {
+    arr.into_iter()
         .scan(0., |acc, x| {
             *acc += x;
             Some(*acc)
         })
-        .collect();
+        .collect()
+}
 
-    println!("{pdist:?}");
-    println!(
-        "prob of getting pot1 rateup 6* on event banner in 57 pulls: {}",
-        cumsum[56]
-    );
+#[allow(clippy::similar_names)]
+fn main() {
+    const PULLS: usize = 166;
+    const FREE_PULLS: usize = 24;
+
+    let pdist_1 = banner::<1, { PULLS + FREE_PULLS }>(0.35);
+    let cdist_1: [_; PULLS] = cumsum(pdist_1)[24..].try_into().unwrap();
+
+    let pdist_2 = banner::<1, PULLS>(0.5);
+    let cdist_2 = cumsum(pdist_2);
 }
