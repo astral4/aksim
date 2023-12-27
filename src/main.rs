@@ -47,7 +47,7 @@ where
 
 #[allow(clippy::needless_range_loop)]
 fn main() {
-    const PULLS: usize = 166;
+    const PULLS: usize = 170;
     const FREE_PULLS: usize = 24;
 
     let pdist_1 = banner::<1, { PULLS + FREE_PULLS - 1 }>(0.35);
