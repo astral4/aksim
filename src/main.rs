@@ -45,7 +45,7 @@ where
     pdist
 }
 
-#[allow(clippy::similar_names)]
+#[allow(clippy::needless_range_loop)]
 fn main() {
     const PULLS: usize = 166;
     const FREE_PULLS: usize = 24;
@@ -56,9 +56,9 @@ fn main() {
 
     let mut prob = pdist_1[..FREE_PULLS].iter().sum::<Float>() * pdist_2.iter().sum::<Float>();
 
-    for second_count in 0..(PULLS - 1) {
-        for first_count in FREE_PULLS..(PULLS + FREE_PULLS - 1 - second_count) {
-            prob += pdist_1[first_count] * pdist_2[second_count];
+    for i2 in 0..(PULLS - 1) {
+        for i1 in FREE_PULLS..(PULLS + FREE_PULLS - 1 - i2) {
+            prob += pdist_1[i1] * pdist_2[i2];
         }
     }
 
