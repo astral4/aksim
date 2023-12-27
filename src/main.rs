@@ -28,15 +28,16 @@ where
     let mut temp_probs = [[0.; 100]; { TARGET + 1 }];
 
     for prob in &mut pdist {
-        for (pity, rate) in SIX_STAR_RATES.iter().enumerate() {
+        for (pity_count, rate) in SIX_STAR_RATES.iter().enumerate() {
             for target_count in 0..TARGET {
-                let prob = probs[target_count][pity];
+                let prob = probs[target_count][pity_count];
 
-                temp_probs[target_count][pity + 1] += prob * (1. - rate);
+                temp_probs[target_count][pity_count + 1] += prob * (1. - rate);
                 temp_probs[target_count][0] += prob * rate * (1. - subrate);
                 temp_probs[target_count + 1][0] += prob * rate * subrate;
             }
         }
+
         probs = temp_probs;
         *prob = probs[TARGET][0];
         temp_probs = [[0.; 100]; { TARGET + 1 }];
