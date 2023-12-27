@@ -8,9 +8,6 @@ readme = "README.md"
 repository = "https://github.com/astral4/aksim"
 license = "MIT"
 
-[dependencies]
-arrayvec = "0.7.4"
-
 [lints.rust]
 future_incompatible = "warn"
 unused = "warn"

@@ -1,7 +1,5 @@
 #![feature(generic_const_exprs)]
 
-use arrayvec::ArrayVec;
-
 type Float = f32;
 
 #[rustfmt::skip]
@@ -47,23 +45,22 @@ where
     pdist
 }
 
-fn cumsum<const LEN: usize>(arr: [Float; LEN]) -> ArrayVec<Float, LEN> {
-    arr.into_iter()
-        .scan(0., |acc, x| {
-            *acc += x;
-            Some(*acc)
-        })
-        .collect()
-}
-
 #[allow(clippy::similar_names)]
 fn main() {
     const PULLS: usize = 166;
     const FREE_PULLS: usize = 24;
 
-    let pdist_1 = banner::<1, { PULLS + FREE_PULLS }>(0.35);
-    let cdist_1: [_; PULLS] = cumsum(pdist_1)[24..].try_into().unwrap();
+    let pdist_1 = banner::<1, { PULLS + FREE_PULLS - 1 }>(0.35);
 
-    let pdist_2 = banner::<1, PULLS>(0.5);
-    let cdist_2 = cumsum(pdist_2);
+    let pdist_2 = banner::<1, { PULLS - 1 }>(0.5);
+
+    let mut prob = pdist_1[..FREE_PULLS].iter().sum::<Float>() * pdist_2.iter().sum::<Float>();
+
+    for second_count in 0..(PULLS - 1) {
+        for first_count in FREE_PULLS..(PULLS + FREE_PULLS - 1 - second_count) {
+            prob += pdist_1[first_count] * pdist_2[second_count];
+        }
+    }
+
+    println!("Probability: {prob}");
 }
