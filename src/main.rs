@@ -1,5 +1,10 @@
 #![feature(generic_const_exprs)]
 
+use core::iter::zip;
+use core::mem::{forget, MaybeUninit};
+use core::ptr::copy_nonoverlapping;
+use realfft::RealFftPlanner;
+
 type Float = f32;
 
 #[rustfmt::skip]
@@ -46,22 +51,63 @@ where
     pdist
 }
 
-#[allow(clippy::needless_range_loop)]
+// see https://stackoverflow.com/a/72461302
+#[allow(clippy::ptr_as_ptr)]
+fn concat<T, const M: usize, const N: usize>(a: [T; M], b: [T; N]) -> [T; M + N] {
+    let mut result = MaybeUninit::uninit();
+    let dest = result.as_mut_ptr() as *mut T;
+    unsafe {
+        copy_nonoverlapping(a.as_ptr(), dest, M);
+        copy_nonoverlapping(b.as_ptr(), dest.add(M), N);
+        forget(a);
+        forget(b);
+        result.assume_init()
+    }
+}
+
+#[allow(clippy::cast_precision_loss, clippy::similar_names)]
 fn main() {
     const PULLS: usize = 170;
     const FREE_PULLS: usize = 24;
+    // sum of the max possible # of pulls on each banner
+    const CONV_SIZE: usize = (PULLS + FREE_PULLS - 1) + (PULLS - 1);
 
-    let pdist_1 = banner::<1, { PULLS + FREE_PULLS - 1 }>(0.35);
+    // arrays are padded with 0s to calculate a "full" convolution
+    let mut pdist_1 = concat(
+        banner::<1, { PULLS + FREE_PULLS - 1 }>(0.35),
+        [0.; { PULLS - 1 }],
+    );
+    let mut pdist_2 = concat(
+        banner::<1, { PULLS - 1 }>(0.5),
+        [0.; { PULLS + FREE_PULLS - 1 }],
+    );
 
-    let pdist_2 = banner::<1, { PULLS - 1 }>(0.5);
+    // initialize FFT calculator
+    let mut planner = RealFftPlanner::<Float>::new();
+    let fft = planner.plan_fft_forward(CONV_SIZE);
 
-    let mut prob = 0.;
+    // apply FFT to probability distributions
+    let mut dft_1 = fft.make_output_vec();
+    fft.process(&mut pdist_1, &mut dft_1).unwrap();
 
-    for i2 in 0..(PULLS - 1) {
-        for i1 in 0..(PULLS + FREE_PULLS - 1 - i2) {
-            prob += pdist_1[i1] * pdist_2[i2];
-        }
-    }
+    let mut dft_2 = fft.make_output_vec();
+    fft.process(&mut pdist_2, &mut dft_2).unwrap();
+
+    // multiply the DFTs together
+    let mut combined_dft: Vec<_> = zip(dft_1, dft_2).map(|(a, b)| a * b).collect();
+
+    // apply IFFT to get the convolved distribution
+    // result needs to be divided by CONV_SIZE to get the actual convolution values
+    let ifft = planner.plan_fft_inverse(CONV_SIZE);
+    let mut combined_seq = ifft.make_output_vec();
+    ifft.process(&mut combined_dft, &mut combined_seq).unwrap();
+
+    // calculate final probability
+    let prob = combined_seq
+        .into_iter()
+        .take(PULLS + FREE_PULLS - 1)
+        .sum::<Float>()
+        / (CONV_SIZE as Float);
 
     println!("Probability: {prob}");
 }
