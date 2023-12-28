@@ -105,7 +105,7 @@ fn main() {
     // calculate final probability
     let prob = combined_seq
         .into_iter()
-        .take(PULLS + FREE_PULLS - 1) // up to the max possible total # of pulls
+        .take(PULLS + FREE_PULLS - 1)
         .sum::<Float>()
         / (CONV_SIZE as Float);
 
