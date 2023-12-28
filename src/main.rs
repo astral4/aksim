@@ -51,6 +51,7 @@ where
     pdist
 }
 
+// see https://stackoverflow.com/a/72461302
 #[allow(clippy::ptr_as_ptr)]
 fn concat<T, const M: usize, const N: usize>(a: [T; M], b: [T; N]) -> [T; M + N] {
     let mut result = MaybeUninit::uninit();
