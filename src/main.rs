@@ -53,11 +53,8 @@ fn main() {
     const PULLS: usize = 170;
     const FREE_PULLS: usize = 24;
 
-    let pdist_1 = banner::<1, { PULLS + FREE_PULLS - 1 }>(0.35);
-    let pdist_2 = banner::<1, { PULLS - 1 }>(0.5);
-
-    let pdist_1 = Array::from_vec(pdist_1.to_vec());
-    let pdist_2 = Array::from_vec(pdist_2.to_vec());
+    let pdist_1 = Array::from_vec(banner::<1, { PULLS + FREE_PULLS - 1 }>(0.35).to_vec());
+    let pdist_2 = Array::from_vec(banner::<1, { PULLS - 1 }>(0.5).to_vec());
 
     let combined_pdist = fftconvolve(&pdist_1, &pdist_2, Mode::Full).unwrap();
 
