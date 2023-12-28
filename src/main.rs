@@ -55,10 +55,10 @@ fn main() {
 
     let pdist_2 = banner::<1, { PULLS - 1 }>(0.5);
 
-    let mut prob = pdist_1[..FREE_PULLS].iter().sum::<Float>() * pdist_2.iter().sum::<Float>();
+    let mut prob = 0.;
 
     for i2 in 0..(PULLS - 1) {
-        for i1 in FREE_PULLS..(PULLS + FREE_PULLS - 1 - i2) {
+        for i1 in 0..(PULLS + FREE_PULLS - 1 - i2) {
             prob += pdist_1[i1] * pdist_2[i2];
         }
     }
