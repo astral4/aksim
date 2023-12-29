@@ -1,8 +1,5 @@
-#![feature(generic_const_exprs)]
-
 use core::iter::zip;
-use core::mem::{forget, MaybeUninit};
-use core::ptr::copy_nonoverlapping;
+use realfft::num_complex::Complex;
 use realfft::RealFftPlanner;
 
 type Float = f32;
@@ -21,20 +18,17 @@ const SIX_STAR_RATES: [Float; 99] = [
     0.84, 0.86, 0.88, 0.90, 0.92, 0.94, 0.96, 0.98, 1.00,
 ];
 
-fn banner<const TARGET: usize, const PULLS: usize>(subrate: Float) -> [Float; PULLS]
-where
-    [(); TARGET + 1]:, // generic const exprs need a `where` bound
-{
-    let mut pdist = [0.; PULLS];
+fn banner_pdist(target: usize, pulls: usize, subrate: Float) -> Vec<Float> {
+    let mut pdist = Vec::with_capacity(pulls);
 
-    let mut probs = [[0.; 100]; { TARGET + 1 }];
+    let mut probs = vec![[0.; 100]; target + 1];
     probs[0][0] = 1.;
 
-    let mut temp_probs = [[0.; 100]; { TARGET + 1 }];
+    let mut temp_probs = vec![[0.; 100]; target + 1];
 
-    for prob in &mut pdist {
+    for _ in 0..pulls {
         for (pity_count, rate) in SIX_STAR_RATES.iter().enumerate() {
-            for target_count in 0..TARGET {
+            for target_count in 0..target {
                 let prob = probs[target_count][pity_count];
 
                 temp_probs[target_count][pity_count + 1] += prob * (1. - rate);
@@ -44,70 +38,88 @@ where
         }
 
         probs = temp_probs;
-        *prob = probs[TARGET][0];
-        temp_probs = [[0.; 100]; { TARGET + 1 }];
+        pdist.push(probs[target][0]);
+        temp_probs = vec![[0.; 100]; target + 1];
     }
 
     pdist
 }
 
-// see https://stackoverflow.com/a/72461302
-#[allow(clippy::ptr_as_ptr)]
-fn concat<T, const M: usize, const N: usize>(a: [T; M], b: [T; N]) -> [T; M + N] {
-    let mut result = MaybeUninit::uninit();
-    let dest = result.as_mut_ptr() as *mut T;
-    unsafe {
-        copy_nonoverlapping(a.as_ptr(), dest, M);
-        copy_nonoverlapping(b.as_ptr(), dest.add(M), N);
-        forget(a);
-        forget(b);
-        result.assume_init()
-    }
-}
-
 #[allow(clippy::cast_precision_loss, clippy::similar_names)]
-fn main() {
-    const PULLS: usize = 170;
-    const FREE_PULLS: usize = 24;
-    // sum of the max possible # of pulls on each banner
-    const CONV_SIZE: usize = (PULLS + FREE_PULLS - 1) + (PULLS - 1);
+fn calculate(banners: &[Banner], pulls: usize) -> Float {
+    let mut conv_size = 0;
+    let mut pdists = Vec::with_capacity(banners.len());
+    let mut total_bonus_pulls = 0;
 
-    // arrays are padded with 0s to calculate a "full" convolution
-    let mut pdist_1 = concat(
-        banner::<1, { PULLS + FREE_PULLS - 1 }>(0.35),
-        [0.; { PULLS - 1 }],
-    );
-    let mut pdist_2 = concat(
-        banner::<1, { PULLS - 1 }>(0.5),
-        [0.; { PULLS + FREE_PULLS - 1 }],
-    );
+    for banner in banners {
+        // at least 1 pull needs to be spent on each banner, so for any single banner,
+        // we subtract the number of other banners to calculate `max_pulls`
+        let max_pulls = pulls + banner.bonus_pulls - (banners.len() - 1);
+
+        let pdist = banner_pdist(banner.target, max_pulls, banner.subrate);
+
+        conv_size += max_pulls;
+        pdists.push(pdist);
+        total_bonus_pulls += banner.bonus_pulls;
+    }
 
     // initialize FFT calculator
     let mut planner = RealFftPlanner::<Float>::new();
-    let fft = planner.plan_fft_forward(CONV_SIZE);
+    let fft = planner.plan_fft_forward(conv_size);
 
-    // apply FFT to probability distributions
-    let mut dft_1 = fft.make_output_vec();
-    fft.process(&mut pdist_1, &mut dft_1).unwrap();
+    // the complex multiplication identity is 1 + 0i
+    let mut combined_dft = vec![Complex::new(1., 0.); conv_size / 2 + 1];
 
-    let mut dft_2 = fft.make_output_vec();
-    fft.process(&mut pdist_2, &mut dft_2).unwrap();
+    for mut pdist in pdists {
+        // vectors are padded with 0s to calculate a "full" convolution
+        pdist.resize_with(conv_size, Default::default);
+        // apply FFT to probability distribution
+        let mut dft = fft.make_output_vec();
+        fft.process(&mut pdist, &mut dft).unwrap();
 
-    // multiply the DFTs together
-    let mut combined_dft: Vec<_> = zip(dft_1, dft_2).map(|(a, b)| a * b).collect();
+        // multiply the DFTs together
+        for (sample, combined_sample) in zip(dft, &mut combined_dft) {
+            *combined_sample *= sample;
+        }
+    }
 
     // apply IFFT to get the convolved distribution
-    // result needs to be divided by CONV_SIZE to get the actual convolution values
-    let ifft = planner.plan_fft_inverse(CONV_SIZE);
+    // the result needs to be divided by `conv_size` to get the actual convolution values
+    let ifft = planner.plan_fft_inverse(conv_size);
     let mut combined_seq = ifft.make_output_vec();
     ifft.process(&mut combined_dft, &mut combined_seq).unwrap();
 
     // calculate final probability
-    let prob = combined_seq
+    combined_seq
         .into_iter()
-        .take(PULLS + FREE_PULLS - 1)
+        .take(pulls + total_bonus_pulls - (banners.len() - 1))
         .sum::<Float>()
-        / (CONV_SIZE as Float);
+        / (conv_size as Float)
+}
+
+struct Banner {
+    target: usize,
+    subrate: Float,
+    bonus_pulls: usize,
+}
+
+fn main() {
+    let banners = [
+        Banner {
+            target: 1,
+            subrate: 0.35,
+            bonus_pulls: 24,
+        },
+        Banner {
+            target: 1,
+            subrate: 0.5,
+            bonus_pulls: 0,
+        },
+    ];
+
+    let pulls = 170;
+
+    let prob = calculate(&banners, pulls);
 
     println!("Probability: {prob}");
 }
