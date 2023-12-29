@@ -1,4 +1,5 @@
 use core::iter::zip;
+use core::mem::swap;
 use realfft::num_complex::Complex;
 use realfft::RealFftPlanner;
 
@@ -37,9 +38,9 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float) -> Vec<Float> {
             }
         }
 
-        probs = temp_probs;
+        swap(&mut probs, &mut temp_probs);
         pdist.push(probs[target][0]);
-        temp_probs = vec![[0.; 100]; target + 1];
+        temp_probs.fill([0.; 100]);
     }
 
     pdist
