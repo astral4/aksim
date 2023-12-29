@@ -1,5 +1,8 @@
 use aksim::{calculate, Banner, Float};
-use divan::{bench, black_box};
+use divan::{bench, black_box, AllocProfiler};
+
+#[global_allocator]
+static ALLOC: AllocProfiler = AllocProfiler::system();
 
 fn main() {
     divan::main();
