@@ -45,3 +45,12 @@ incomplete_features = "allow"
 pedantic = "warn"
 missing_panics_doc = "allow"
 module_name_repetitions = "allow"
+
+[profile.release]
+panic = "abort"
+lto = true
+strip = true
+
+[profile.bench]
+lto = true
+strip = true
