@@ -12,6 +12,10 @@ license = "MIT"
 name = "two_banners"
 harness = false
 
+[[bench]]
+name = "four_banners"
+harness = false
+
 [dependencies]
 realfft = "3.3.0"
 
