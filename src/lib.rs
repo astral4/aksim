@@ -2,7 +2,7 @@ use core::iter::zip;
 use realfft::num_complex::Complex;
 use realfft::RealFftPlanner;
 
-type Float = f32;
+pub type Float = f32;
 
 #[rustfmt::skip]
 const SIX_STAR_RATES: [Float; 99] = [
@@ -46,7 +46,7 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float) -> Vec<Float> {
 }
 
 #[allow(clippy::cast_precision_loss, clippy::similar_names)]
-fn calculate(banners: &[Banner], pulls: usize) -> Float {
+pub fn calculate(banners: &[Banner], pulls: usize) -> Float {
     let mut conv_size = 0;
     let mut pdists = Vec::with_capacity(banners.len());
     let mut total_bonus_pulls = 0;
@@ -97,29 +97,8 @@ fn calculate(banners: &[Banner], pulls: usize) -> Float {
         / (conv_size as Float)
 }
 
-struct Banner {
-    target: usize,
-    subrate: Float,
-    bonus_pulls: usize,
-}
-
-fn main() {
-    let banners = [
-        Banner {
-            target: 1,
-            subrate: 0.35,
-            bonus_pulls: 24,
-        },
-        Banner {
-            target: 1,
-            subrate: 0.5,
-            bonus_pulls: 0,
-        },
-    ];
-
-    let pulls = 170;
-
-    let prob = calculate(&banners, pulls);
-
-    println!("Probability: {prob}");
+pub struct Banner {
+    pub target: usize,
+    pub subrate: Float,
+    pub bonus_pulls: usize,
 }

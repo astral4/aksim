@@ -8,8 +8,15 @@ readme = "README.md"
 repository = "https://github.com/astral4/aksim"
 license = "MIT"
 
+[[bench]]
+name = "two_banners"
+harness = false
+
 [dependencies]
 realfft = "3.3.0"
+
+[dev-dependencies]
+divan = "0.1.8"
 
 [lints.rust]
 future_incompatible = "warn"
@@ -18,7 +25,6 @@ let_underscore_drop = "deny"
 macro_use_extern_crate = "deny"
 meta_variable_misuse = "deny"
 missing_abi = "deny"
-missing_debug_implementations = "deny"
 non_ascii_idents = "deny"
 nonstandard_style = "deny"
 noop_method_call = "deny"
@@ -27,7 +33,6 @@ trivial_casts = "deny"
 trivial_numeric_casts = "deny"
 unreachable_pub = "deny"
 unsafe_op_in_unsafe_fn = "deny"
-unused_crate_dependencies = "deny"
 unused_import_braces = "deny"
 unused_lifetimes = "deny"
 unused_macro_rules = "deny"
@@ -38,4 +43,5 @@ incomplete_features = "allow"
 
 [lints.clippy]
 pedantic = "warn"
+missing_panics_doc = "allow"
 module_name_repetitions = "allow"
