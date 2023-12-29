@@ -25,22 +25,22 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float) -> Vec<Float> {
     let mut probs = vec![[0.; 100]; target + 1];
     probs[0][0] = 1.;
 
-    let mut temp_probs = vec![[0.; 100]; target + 1];
+    let mut new_probs = vec![[0.; 100]; target + 1];
 
     for _ in 0..pulls {
         for (pity_count, rate) in SIX_STAR_RATES.iter().enumerate() {
             for target_count in 0..target {
-                let prob = probs[target_count][pity_count];
+                let old_prob = probs[target_count][pity_count];
 
-                temp_probs[target_count][pity_count + 1] += prob * (1. - rate);
-                temp_probs[target_count][0] += prob * rate * (1. - subrate);
-                temp_probs[target_count + 1][0] += prob * rate * subrate;
+                new_probs[target_count][pity_count + 1] += old_prob * (1. - rate);
+                new_probs[target_count][0] += old_prob * rate * (1. - subrate);
+                new_probs[target_count + 1][0] += old_prob * rate * subrate;
             }
         }
 
-        swap(&mut probs, &mut temp_probs);
+        swap(&mut probs, &mut new_probs);
         pdist.push(probs[target][0]);
-        temp_probs.fill([0.; 100]);
+        new_probs.fill([0.; 100]);
     }
 
     pdist
