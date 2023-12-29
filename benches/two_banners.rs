@@ -1,10 +1,11 @@
 use aksim::{calculate, Banner, Float};
+use divan::{bench, black_box};
 
 fn main() {
     divan::main();
 }
 
-#[divan::bench]
+#[bench]
 fn target_1() -> Float {
     let banners = [
         Banner {
@@ -21,10 +22,10 @@ fn target_1() -> Float {
 
     let pulls = 170;
 
-    calculate(&banners, pulls)
+    calculate(black_box(&banners), black_box(pulls))
 }
 
-#[divan::bench]
+#[bench]
 fn target_10() -> Float {
     let banners = [
         Banner {
@@ -41,5 +42,5 @@ fn target_10() -> Float {
 
     let pulls = 1700;
 
-    calculate(&banners, pulls)
+    calculate(black_box(&banners), black_box(pulls))
 }
