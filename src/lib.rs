@@ -19,9 +19,23 @@ const SIX_STAR_RATES: [Float; 99] = [
     0.84, 0.86, 0.88, 0.90, 0.92, 0.94, 0.96, 0.98, 1.00,
 ];
 
+// Computes the probability distribution (up to `pulls`) of achieving the `target` of a banner.
 fn banner_pdist(target: usize, pulls: usize, subrate: Float) -> Vec<Float> {
+    // We calculate the probability distribution by keeping track of a 2D matrix of states.
+    // One axis is for the target count and one axis is for the pity count.
+    // Each element of the matrix represents a "state" that we could be in while pulling
+    // and is the probability of being in that state.
+    // For example, the probability of having 2 of the target and being at 38 pity is at probs[2][38].
+    // Every pull, we update the matrix by looking at each state and updating the probabilities of possible next states.
+    // For example: from probs[2][38], we could go to:
+    // - probs[2][39] (didn't pull a 6*, increasing pity by 1),
+    // - probs[2][0] (pulled an off-rate 6*, resetting pity to 0),
+    // - or probs[3][0] (pulled the target 6*, increasing the target count by 1 and resetting pity to 0).
+
     let mut pdist = Vec::with_capacity(pulls);
 
+    // No pulls have been done yet, so having a target and pity count of 0 is certain (probability of 1).
+    // All other states are impossible, so they are initialized with a probability of 0.
     let mut probs = vec![[0.; 100]; target + 1];
     probs[0][0] = 1.;
 
@@ -38,23 +52,28 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float) -> Vec<Float> {
             }
         }
 
+        // unlike direct re-assignment, swapping and filling avoids re-allocating memory
+        // update the `probs` matrix
         swap(&mut probs, &mut new_probs);
-        pdist.push(probs[target][0]);
+        // reset the `new_probs` matrix for the next pull
         new_probs.fill([0.; 100]);
+
+        pdist.push(probs[target][0]);
     }
 
     pdist
 }
 
 #[allow(clippy::cast_precision_loss, clippy::similar_names)]
+// Calculates the probability of achieving the target counts of all `banners` within `pulls`.
 pub fn calculate(banners: &[Banner], pulls: usize) -> Float {
     let mut conv_size = 0;
     let mut pdists = Vec::with_capacity(banners.len());
     let mut total_bonus_pulls = 0;
 
     for banner in banners {
-        // at least 1 pull needs to be spent on each banner, so for any single banner,
-        // we subtract the number of other banners to calculate `max_pulls`
+        // At least 1 pull needs to be spent on each banner, so for any single banner,
+        // we subtract the number of other banners to calculate `max_pulls`.
         let max_pulls = pulls + banner.bonus_pulls - (banners.len() - 1);
 
         let pdist = banner_pdist(banner.target, max_pulls, banner.subrate);
@@ -64,33 +83,41 @@ pub fn calculate(banners: &[Banner], pulls: usize) -> Float {
         total_bonus_pulls += banner.bonus_pulls;
     }
 
-    // initialize FFT calculator
+    // initialize the FFT calculator
     let mut planner = RealFftPlanner::<Float>::new();
     let fft = planner.plan_fft_forward(conv_size);
 
-    // the complex multiplication identity is 1 + 0i
+    // We store the result of DFT multiplication in a vector.
+    // This vector has length `conv_size`/2 + 1 because `realfft` transforms
+    // the real-valued probability distributions of length `conv_size`
+    // into complex vectors of length `conv_size`/2 + 1.
+    // We need to initialize elements of this vector with a value X
+    // such that X * first DFT frequency = first DFT frequency.
+    // Since DFT frequencies are complex numbers, X is the complex multiplication identity: 1 + 0i.
     let mut combined_dft = vec![Complex::new(1., 0.); conv_size / 2 + 1];
 
     for mut pdist in pdists {
         // vectors are padded with 0s to calculate a "full" convolution
         pdist.resize_with(conv_size, Default::default);
+
         // apply FFT to probability distribution
         let mut dft = fft.make_output_vec();
         fft.process(&mut pdist, &mut dft).unwrap();
 
-        // multiply the DFTs together
+        // multiply the DFTs together (Hadamard product)
         for (sample, combined_sample) in zip(dft, &mut combined_dft) {
             *combined_sample *= sample;
         }
     }
 
-    // apply IFFT to get the convolved distribution
-    // the result needs to be divided by `conv_size` to get the actual convolution values
+    // We apply the IFFT to get the convolved distribution.
+    // According to https://docs.rs/rustfft/6.1.0/rustfft/index.html#normalization,
+    // the result needs to be divided by `conv_size` to get the actual convolution values.
     let ifft = planner.plan_fft_inverse(conv_size);
     let mut combined_seq = ifft.make_output_vec();
     ifft.process(&mut combined_dft, &mut combined_seq).unwrap();
 
-    // calculate final probability
+    // calculate the final probability
     combined_seq
         .into_iter()
         .take(pulls + total_bonus_pulls - (banners.len() - 1))
