@@ -25,12 +25,12 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float) -> Vec<Float> {
     // One axis is for the target count and one axis is for the pity count.
     // Each element of the matrix represents a "state" that we could be in while pulling
     // and is the probability of being in that state.
-    // For example, the probability of having 2 of the target and being at 38 pity is at probs[2][38].
     // Every pull, we update the matrix by looking at each state and updating the probabilities of possible next states.
-    // For example: from probs[2][38], we could go to:
+    // For example, the probability of having 2 of the target and being at 38 pity is at probs[2][38].
+    // From probs[2][38], we could advance to:
     // - probs[2][39] (didn't pull a 6*, increasing pity by 1),
-    // - probs[2][0] (pulled an off-rate 6*, resetting pity to 0),
-    // - or probs[3][0] (pulled the target 6*, increasing the target count by 1 and resetting pity to 0).
+    // - probs[2][0] (pulled an off-rate 6*, resetting pity to 0), or
+    // - probs[3][0] (pulled a target 6*, increasing the target count by 1 and resetting pity to 0).
 
     let mut pdist = Vec::with_capacity(pulls);
 
@@ -58,6 +58,14 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float) -> Vec<Float> {
         // reset the `new_probs` matrix for the next pull
         new_probs.fill([0.; 100]);
 
+        // There are two kinds of states that can reach probs[target][0]:
+        // - probs[target][p] (pulled an off-rate 6*, resetting pity to 0), or
+        // - probs[target - 1][p] (pulled a target 6*, increasing the target count by 1 and resetting pity to 0),
+        // where p is any pity count.
+        // However, we only update states in the matrix with target counts from 0 to target - 1,
+        // so states of the first kind are never considered in our calculations.
+        // This means that the probability at probs[target][0] is the probability that
+        // a state of the second kind got here (and the banner target was achieved) on this pull.
         pdist.push(probs[target][0]);
     }
 
