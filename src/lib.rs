@@ -96,12 +96,12 @@ pub fn calculate(banners: &[Banner], pulls: usize) -> Float {
     let fft = planner.plan_fft_forward(conv_size);
 
     // We store the result of DFT multiplication in a vector.
-    // This vector has length `conv_size`/2 + 1 because `realfft` transforms
-    // the real-valued probability distributions of length `conv_size`
-    // into complex vectors of length `conv_size`/2 + 1.
-    // We need to initialize elements of this vector with a value X
+    // We need to initialize the elements of this vector with a value X
     // such that X * first DFT frequency = first DFT frequency.
     // Since DFT frequencies are complex numbers, X is the complex multiplication identity: 1 + 0i.
+    // Also, this vector has length `conv_size`/2 + 1 because `realfft` transforms
+    // the real-valued probability distributions of length `conv_size`
+    // into complex vectors of length `conv_size`/2 + 1.
     let mut combined_dft = vec![Complex::new(1., 0.); conv_size / 2 + 1];
 
     for mut pdist in pdists {
