@@ -29,5 +29,4 @@ The rate-up mechanic works like this: generally, each banner has one or two "rat
 |    event    |         1          |            50%            |
 |   limited   |         2          |            35%            |
 
- > [!NOTE]
- > We will only focus on probabilities of pulling rate-up 6★ characters for the rest of this document.
+Players generally pull on banners with a **target** in mind, such as obtaining a certain number of copies of a specific rate-up 6★ character. We'll focus on calculating probabilities for just this scenario.
