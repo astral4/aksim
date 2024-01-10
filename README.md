@@ -30,3 +30,26 @@ The rate-up mechanic works like this: generally, each banner has one or two "rat
 |   limited   |         2          |            35%            |
 
 Players generally pull on banners with a **target** in mind, such as obtaining a certain number of copies of a specific rate-up 6★ character. We'll focus on calculating probabilities for just this scenario.
+
+## A single banner
+
+What is the probability of achieving a target within a certain number of pulls? It turns out that calculating this isn't exactly simple or straightforward.
+
+Let's look at an easy case: the target is obtaining one copy of a specific rate-up 6★ character. Let $n$ be the number of pulls and $r_s$ be the subrate. We can express the probability as the output of a function $p$ with inputs $n$ and $r_s$. For the first 50 pulls, the pity mechanic doesn't apply:
+
+$$p(n, r_s) = 1 - (1 - 0.02 \cdot r_s)^n$$
+
+Explanation:
+
+- The probability of pulling a 6★ is $0.02$.
+- The probability of pulling a 6★ *and* having it be the desired rate-up character is $0.02 \cdot r_s$.
+- The probability of *not* pulling the character is $1 - 0.02 \cdot r_s$.
+  - Since there are only two possible outcomes—the character either is pulled or is not—and they are mutually exclusive, their probabilities must add up to $1$.
+- The probability of *not* obtaining the character in $n$ pulls is $(1 - 0.02 \cdot r_s)^n$.
+  - Not obtaining the character in $n$ pulls is the same as not obtaining on pull 1 *and* not obtaining on pull 2 *and* ... *and* not obtaining on pull $n$. The probability of not obtaining the character on each pull is the same: $1 - 0.02 \cdot r_s$.
+- The probability of obtaining the character in $n$ pulls is $1 - (1 - 0.02 \cdot r_s)^n$.
+  - In other words, this is the probability of *not* *not* obtaining the character in $n$ pulls. Again, since there are only two possible outcomes—the character either is obtained in $n$ pulls or is not—and they are mutually exclusive, their probabilities must add up to $1$.
+
+However, after the first 50 pulls, the calculation becomes much more complicated. We have to account for the possibility that a non-rate-up 6★ character was pulled, resetting the pity mechanic but not counting towards the target. Also, here, the target is only one copy of a specific rate-up 6★ character. What if the target was multiple copies instead?
+
+Clearly, we need a better approach. We'll use computers to crunch numbers from here on out and cover various methods for calculating probabilities.
