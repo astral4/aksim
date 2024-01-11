@@ -44,12 +44,69 @@ Explanation:
 - The probability of pulling a 6★ is $0.02$.
 - The probability of pulling a 6★ *and* having it be the desired rate-up character is $0.02 \cdot r_s$.
 - The probability of *not* pulling the character is $1 - 0.02 \cdot r_s$.
-  - Since there are only two possible outcomes—the character either is pulled or is not—and they are mutually exclusive, their probabilities must add up to $1$.
+	- Since there are only two possible outcomes—the character either is pulled or is not—and they are mutually exclusive, their probabilities must add up to $1$.
 - The probability of *not* obtaining the character in $n$ pulls is $(1 - 0.02 \cdot r_s)^n$.
-  - Not obtaining the character in $n$ pulls is the same as not obtaining on pull 1 *and* not obtaining on pull 2 *and* ... *and* not obtaining on pull $n$. The probability of not obtaining the character on each pull is the same: $1 - 0.02 \cdot r_s$.
+	- Not obtaining the character in $n$ pulls is the same as not obtaining on pull 1 *and* not obtaining on pull 2 *and* ... *and* not obtaining on pull $n$. The probability of not obtaining the character on each pull is the same: $1 - 0.02 \cdot r_s$.
 - The probability of obtaining the character in $n$ pulls is $1 - (1 - 0.02 \cdot r_s)^n$.
-  - In other words, this is the probability of *not* *not* obtaining the character in $n$ pulls. Again, since there are only two possible outcomes—the character either is obtained in $n$ pulls or is not—and they are mutually exclusive, their probabilities must add up to $1$.
+	- In other words, this is the probability of *not* *not* obtaining the character in $n$ pulls. Again, since there are only two possible outcomes—the character either is obtained in $n$ pulls or is not—and they are mutually exclusive, their probabilities must add up to $1$.
 
 However, after the first 50 pulls, the calculation becomes much more complicated. We have to account for the possibility that a non-rate-up 6★ character was pulled, resetting the pity mechanic but not counting towards the target. Also, here, the target is only one copy of a specific rate-up 6★ character. What if the target was multiple copies instead?
 
 Clearly, we need a better approach. We'll use computers to crunch numbers from here on out and cover various methods for calculating probabilities.
+
+### The Monte Carlo method
+
+One approach is to simulate a player pulling on a banner until they achieve the target. We can infer useful statistics by running this simulation many times and recording the number of pulls spent for each run. For example, if we run the simulation 100 times and observe that 26 of those runs took 30 pulls or less, then it's reasonable to conclude that the probability of achieving the target within 30 pulls is around $\frac{26}{100}$, or 26%.
+
+We can simulate one pull by generating a random number. The pull result depends on the number generated. Let's assume that we're generating numbers in the range $[0, 1)$, and each number is equally likely to be generated. 
+
+We could say a 6★ character is pulled if the number is in the range $[0, 0.02)$. This works because the probability that the number is in the range is $0.02$, and the probability of pulling a 6★ character is also $0.02$. Similarly, we can say that the specific rate-up 6★ character is pulled if the number is in the range $[0, 0.02 \cdot r_s)$, where $r_s$ is the subrate. Obviously, the ranges don't specifically have to be $[0, 0.02)$ and $[0, 0.02 \cdot r_s)$, but they're convenient for our purposes.
+
+However, these ranges don't account for the pity mechanism increasing the probability of pulling a 6★ character. So, our simulation also has to keep track of the pity count and adjust ranges accordingly.
+
+Our simulation must also keep track of the quantity of the specific rate-up 6★ character pulled so far so we know when the target is achieved.
+
+Here's what a computer program for this task might look like:
+
+```rust
+use rand::Rng;
+use rand::rngs::StdRng;
+
+const RUNS: u32 = 100000;
+const TARGET: u8 = 1;
+const SUBRATE: f32 = 0.5;
+
+fn main() {
+	let mut rng = StdRng::from_entropy();
+	let mut pull_counts = Vec::new();
+
+	for _ in 0..RUNS {
+		let mut pulls = 0;
+		let mut target_count = 0;
+		let mut pity_count = 0;
+
+		while target_count < TARGET {
+			let six_star_rate = if pity_count < 50 {
+				0.02
+			} else {
+				0.02 * (pity_count - 48) as f32
+			};
+
+			pulls += 1;
+
+			let r: f32 = rng.gen();
+
+			if r >= 0 && r < six_star_rate * SUBRATE {
+				target_count += 1;
+				pity_count = 0;
+			} else if r >= six_star_rate * SUBRATE && r < six_star_rate {
+				pity_count = 0;
+			} else if r >= six_star_rate && r < 1 {
+				pity_count += 1;
+			}
+		}
+
+		pull_counts.push(pulls);
+	}
+}
+```
