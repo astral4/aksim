@@ -44,11 +44,11 @@ Explanation:
 - The probability of pulling a 6★ is $0.02$.
 - The probability of pulling a 6★ *and* it being the target character is $0.02 \cdot r_s$.
 - The probability of *not* pulling the target character is $1 - 0.02 \cdot r_s$.
-	- Since there are only two possible outcomes—the character either is pulled or is not—and they are mutually exclusive, their probabilities must add up to $1$.
+    - Since there are only two possible outcomes—the character either is pulled or is not—and they are mutually exclusive, their probabilities must add up to $1$.
 - The probability of *not* obtaining the target character in $n$ pulls is $(1 - 0.02 \cdot r_s)^n$.
-	- Not obtaining the character in $n$ pulls is the same as not obtaining on pull 1 *and* not obtaining on pull 2 *and* ... *and* not obtaining on pull $n$. The probability of not obtaining the character on each pull is the same: $1 - 0.02 \cdot r_s$.
+    - Not obtaining the character in $n$ pulls is the same as not obtaining on pull 1 *and* not obtaining on pull 2 *and* ... *and* not obtaining on pull $n$. The probability of not obtaining the character on each pull is the same: $1 - 0.02 \cdot r_s$.
 - The probability of obtaining the target character in $n$ pulls is $1 - (1 - 0.02 \cdot r_s)^n$.
-	- In other words, this is the probability of *not* *not* obtaining the character in $n$ pulls. Again, since there are only two possible outcomes—the character either is obtained in $n$ pulls or is not—and they are mutually exclusive, their probabilities must add up to $1$.
+    - In other words, this is the probability of *not* *not* obtaining the character in $n$ pulls. Again, since there are only two possible outcomes—the character either is obtained in $n$ pulls or is not—and they are mutually exclusive, their probabilities must add up to $1$.
 
 However, after the first 50 pulls, the calculation becomes much more complicated. We have to account for the possibility that a non-rate-up 6★ was pulled, resetting the pity mechanic but not counting towards the target. Also, here, the target is only one copy of the target character. What if the target was multiple copies instead?
 
@@ -78,44 +78,44 @@ const TARGET: u8 = 1; // target character count needed to achieve the target
 const SUBRATE: f32 = 0.5;
 
 fn main() {
-	let mut rng = StdRng::from_entropy(); // initialize the random number generator
-	let mut pull_counts = Vec::new(); // initialize the list of pull counts for each run
+    let mut rng = StdRng::from_entropy(); // initialize the random number generator
+    let mut pull_counts = Vec::new(); // initialize the list of pull counts for each run
 
-	// repeat the simulation `RUNS` times
-	for _ in 0..RUNS {
-		let mut pulls = 0;
-		let mut target_count = 0;
-		let mut pity_count = 0;
+    // repeat the simulation `RUNS` times
+    for _ in 0..RUNS {
+        let mut pulls = 0;
+        let mut target_count = 0;
+        let mut pity_count = 0;
 
-		// keep pulling until the target is achieved
-		while target_count < TARGET {
-			// calculate the probability of pulling a 6★ based on the current pity count
-			let six_star_rate = if pity_count < 50 {
-				0.02
-			} else {
-				0.02 * (pity_count - 48) as f32
-			};
+        // keep pulling until the target is achieved
+        while target_count < TARGET {
+            // calculate the probability of pulling a 6★ based on the current pity count
+            let six_star_rate = if pity_count < 50 {
+                0.02
+            } else {
+                0.02 * (pity_count - 48) as f32
+            };
 
-			pulls += 1;
+            pulls += 1;
 
-			let r: f32 = rng.gen(); // generate a random number
+            let r: f32 = rng.gen(); // generate a random number
 
-			if r >= 0 && r < six_star_rate * SUBRATE {
-				// pulled the target character
-				target_count += 1;
-				pity_count = 0;
-			} else if r >= six_star_rate * SUBRATE && r < six_star_rate {
-				// pulled a 6★ that wasn't the target character
-				pity_count = 0;
-			} else if r >= six_star_rate && r < 1 {
-				// didn't pull a 6★
-				pity_count += 1;
-			}
-		}
+            if r >= 0 && r < six_star_rate * SUBRATE {
+                // pulled the target character
+                target_count += 1;
+                pity_count = 0;
+            } else if r >= six_star_rate * SUBRATE && r < six_star_rate {
+                // pulled a 6★ that wasn't the target character
+                pity_count = 0;
+            } else if r >= six_star_rate && r < 1 {
+                // didn't pull a 6★
+                pity_count += 1;
+            }
+        }
 
-		pull_counts.push(pulls); // record the number of pulls spent
-	}
+        pull_counts.push(pulls); // record the number of pulls spent
+    }
 
-	// analyze `pull_counts` after the simulation is over
+    // analyze `pull_counts` after the simulation is over
 }
 ```
