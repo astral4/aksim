@@ -69,23 +69,27 @@ Our simulation must also keep track of the target character count so we know whe
 Here's what a computer program for this task might look like:
 
 ```rust
+// we use the `rand` crate to generate random numbers
 use rand::Rng;
 use rand::rngs::StdRng;
 
-const RUNS: u32 = 100000;
-const TARGET: u8 = 1;
+const RUNS: u32 = 100000; // number of simulation runs
+const TARGET: u8 = 1; // target character count needed to achieve the target
 const SUBRATE: f32 = 0.5;
 
 fn main() {
-	let mut rng = StdRng::from_entropy();
-	let mut pull_counts = Vec::new();
+	let mut rng = StdRng::from_entropy(); // initialize the random number generator
+	let mut pull_counts = Vec::new(); // initialize the list of pull counts for each run
 
+	// repeat the simulation `RUNS` times
 	for _ in 0..RUNS {
 		let mut pulls = 0;
 		let mut target_count = 0;
 		let mut pity_count = 0;
 
+		// keep pulling until the target is achieved
 		while target_count < TARGET {
+			// calculate the probability of pulling a 6★ based on the current pity count
 			let six_star_rate = if pity_count < 50 {
 				0.02
 			} else {
@@ -94,19 +98,24 @@ fn main() {
 
 			pulls += 1;
 
-			let r: f32 = rng.gen();
+			let r: f32 = rng.gen(); // generate a random number
 
 			if r >= 0 && r < six_star_rate * SUBRATE {
+				// pulled the target character
 				target_count += 1;
 				pity_count = 0;
 			} else if r >= six_star_rate * SUBRATE && r < six_star_rate {
+				// pulled a 6★ that wasn't the target character
 				pity_count = 0;
 			} else if r >= six_star_rate && r < 1 {
+				// didn't pull a 6★
 				pity_count += 1;
 			}
 		}
 
-		pull_counts.push(pulls);
+		pull_counts.push(pulls); // record the number of pulls spent
 	}
+
+	// analyze `pull_counts` after the simulation is over
 }
 ```
