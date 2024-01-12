@@ -21,19 +21,18 @@ const SIX_STAR_RATES: [Float; 99] = [
 
 // Computes the probability distribution (up to `pulls`) of achieving the `target` of a banner.
 fn banner_pdist(target: usize, pulls: usize, subrate: Float, focus: bool) -> Vec<Float> {
-
     let mut pdist = Vec::with_capacity(pulls);
 
     // probabilities that each pity level would be reached from 0 pity before getting reset
     let mut probs_pity_reached = [1.; 99];
     for i in 1..99 {
-        probs_pity_reached[i] = probs_pity_reached[i-1] * (1.0 - SIX_STAR_RATES[i-1]);
+        probs_pity_reached[i] = probs_pity_reached[i - 1] * (1.0 - SIX_STAR_RATES[i - 1]);
     }
 
     // probabilities to get the next any 6-star in exactly N rolls starting from 0 pity
     let mut pdist_6star_in_exactly_nrolls = [0.; 99];
     for i in 1..99 {
-        pdist_6star_in_exactly_nrolls[i] = probs_pity_reached[i-1] - probs_pity_reached[i];
+        pdist_6star_in_exactly_nrolls[i] = probs_pity_reached[i - 1] - probs_pity_reached[i];
     }
 
     if focus {
@@ -42,65 +41,77 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float, focus: bool) -> Vec
         // probabilities to get the target 6-star in exactly N rolls starting from 0 pity and 0 focus
         let mut pdist_target_in_exactly_nrolls_with_focus = [0.; 249];
         for i in 0..151 {
-            for j in 1..99 { 
-                let x = no_target[i]*pdist_6star_in_exactly_nrolls[j];
+            for j in 1..99 {
+                let x = no_target[i] * pdist_6star_in_exactly_nrolls[j];
                 if i + j > 150 {
-                    pdist_target_in_exactly_nrolls_with_focus[i+j] += x;
-                }
-                else {
-                    pdist_target_in_exactly_nrolls_with_focus[i+j] += x*subrate;
-                    no_target[i+j] += x*(1.0-subrate);
+                    pdist_target_in_exactly_nrolls_with_focus[i + j] += x;
+                } else {
+                    pdist_target_in_exactly_nrolls_with_focus[i + j] += x * subrate;
+                    no_target[i + j] += x * (1.0 - subrate);
                 }
             }
         }
-        
+
         // probs[rolls][wins][focus]
         // where focus: (0="unspent and counter at 0", 1="spent")
         // only states where pity=0 are considered
-        let mut probs = vec![vec![[0.; 2]; target+1]; pulls + 1];
+        let mut probs = vec![vec![[0.; 2]; target + 1]; pulls + 1];
         probs[0][0][0] = 1.0;
-    
+
         for p in 0..pulls {
             for t in 0..target {
                 // focus still active, hitting target without exhausting focus chance
                 for next in 1..151 {
-                    if p + next > pulls { break }
-                    probs[p+next][t+1][0] += probs[p][t][0] * pdist_target_in_exactly_nrolls_with_focus[next];
+                    if p + next > pulls {
+                        break;
+                    }
+                    probs[p + next][t + 1][0] +=
+                        probs[p][t][0] * pdist_target_in_exactly_nrolls_with_focus[next];
                 }
                 // focus still active, hitting target and exhausting focus chance
                 for next in 151..249 {
-                    if p + next > pulls { break }
-                    probs[p+next][t+1][1] += probs[p][t][0] * pdist_target_in_exactly_nrolls_with_focus[next];
+                    if p + next > pulls {
+                        break;
+                    }
+                    probs[p + next][t + 1][1] +=
+                        probs[p][t][0] * pdist_target_in_exactly_nrolls_with_focus[next];
                 }
                 // focus no longer active, relying on subrate to hit target
                 for next in 1..99 {
-                    if p + next > pulls { break }
-                    probs[p+next][t+1][1] += probs[p][t][1] * pdist_6star_in_exactly_nrolls[next] * subrate;
-                    probs[p+next][t][1] += probs[p][t][1] * pdist_6star_in_exactly_nrolls[next] * (1.0-subrate);
+                    if p + next > pulls {
+                        break;
+                    }
+                    probs[p + next][t + 1][1] +=
+                        probs[p][t][1] * pdist_6star_in_exactly_nrolls[next] * subrate;
+                    probs[p + next][t][1] +=
+                        probs[p][t][1] * pdist_6star_in_exactly_nrolls[next] * (1.0 - subrate);
                 }
             }
         }
-        for p in 1..pulls+1 {
-            pdist.push(probs[p][target][0]+probs[p][target][1]);
+        for p in 1..pulls + 1 {
+            pdist.push(probs[p][target][0] + probs[p][target][1]);
         }
-    }
-    else {
+    } else {
         // probs[rolls][wins]
         // only states where pity=0 are considered
-        let mut probs = vec![vec![0.; target+1]; pulls + 1];
+        let mut probs = vec![vec![0.; target + 1]; pulls + 1];
         probs[0][0] = 1.0;
-    
+
         for p in 0..pulls {
             for t in 0..target {
                 // no focus, relying on subrate to hit target
                 for next in 1..99 {
-                    if p + next > pulls { break }
-                    probs[p+next][t+1] += probs[p][t] * pdist_6star_in_exactly_nrolls[next] * subrate;
-                    probs[p+next][t] += probs[p][t] * pdist_6star_in_exactly_nrolls[next] * (1.0-subrate);
+                    if p + next > pulls {
+                        break;
+                    }
+                    probs[p + next][t + 1] +=
+                        probs[p][t] * pdist_6star_in_exactly_nrolls[next] * subrate;
+                    probs[p + next][t] +=
+                        probs[p][t] * pdist_6star_in_exactly_nrolls[next] * (1.0 - subrate);
                 }
             }
         }
-        for p in 1..pulls+1 {
+        for p in 1..pulls + 1 {
             pdist.push(probs[p][target]);
         }
     }
