@@ -9,11 +9,11 @@ repository = "https://github.com/astral4/aksim"
 license = "MIT"
 
 [[bench]]
-name = "two_banners"
+name = "simple"
 harness = false
 
 [[bench]]
-name = "four_banners"
+name = "focus"
 harness = false
 
 [dependencies]

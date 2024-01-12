@@ -1,4 +1,5 @@
-use aksim::{calculate, Banner, Float};
+use aksim::simple::{calculate, Banner};
+use aksim::Float;
 use divan::{bench, black_box, AllocProfiler};
 
 #[global_allocator]
@@ -9,7 +10,7 @@ fn main() {
 }
 
 #[bench]
-fn target_1() -> Float {
+fn small() -> Float {
     let banners = [
         Banner {
             target: 1,
@@ -21,25 +22,15 @@ fn target_1() -> Float {
             subrate: 0.5,
             bonus_pulls: 0,
         },
-        Banner {
-            target: 1,
-            subrate: 0.2,
-            bonus_pulls: 48,
-        },
-        Banner {
-            target: 1,
-            subrate: 0.4,
-            bonus_pulls: 0,
-        },
     ];
 
-    let pulls = 400;
+    let pulls = 170;
 
     calculate(black_box(&banners), black_box(pulls))
 }
 
 #[bench]
-fn target_10() -> Float {
+fn large() -> Float {
     let banners = [
         Banner {
             target: 10,
