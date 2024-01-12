@@ -20,53 +20,89 @@ const SIX_STAR_RATES: [Float; 99] = [
 ];
 
 // Computes the probability distribution (up to `pulls`) of achieving the `target` of a banner.
-fn banner_pdist(target: usize, pulls: usize, subrate: Float) -> Vec<Float> {
-    // We calculate the probability distribution by keeping track of a 2D matrix of states.
-    // One axis is for the target count and one axis is for the pity count.
-    // Each element of the matrix represents a "state" that we could be in while pulling
-    // and is the probability of being in that state.
-    // Every pull, we update the matrix by looking at each state and updating the probabilities of possible next states.
-    // For example, the probability of having 2 of the target and being at 38 pity is at probs[2][38].
-    // From probs[2][38], we could advance to:
-    // - probs[2][39] (didn't pull a 6*, increasing pity by 1),
-    // - probs[2][0] (pulled an off-rate 6*, resetting pity to 0), or
-    // - probs[3][0] (pulled a target 6*, increasing the target count by 1 and resetting pity to 0).
+fn banner_pdist(target: usize, pulls: usize, subrate: Float, focus: bool) -> Vec<Float> {
 
     let mut pdist = Vec::with_capacity(pulls);
 
-    // No pulls have been done yet, so having a target and pity count of 0 is certain (probability of 1).
-    // All other states are impossible, so they are initialized with a probability of 0.
-    let mut probs = vec![[0.; 100]; target + 1];
-    probs[0][0] = 1.;
+    // probabilities that each pity level would be reached from 0 pity before getting reset
+    let mut probs_pity_reached = [1.; 99];
+    for i in 1..99 {
+        probs_pity_reached[i] = probs_pity_reached[i-1] * (1.0 - SIX_STAR_RATES[i]);
+    }
 
-    let mut new_probs = vec![[0.; 100]; target + 1];
+    // probabilities to get the next any 6-star in exactly N rolls starting from 0 pity
+    let mut pdist_6star_in_exactly_nrolls = [0.; 99];
+    for i in 1..99 {
+        pdist_6star_in_exactly_nrolls[i] = probs_pity_reached[i-1] - probs_pity_reached[i];
+    }
 
-    for _ in 0..pulls {
-        for (pity_count, rate) in SIX_STAR_RATES.iter().enumerate() {
-            for target_count in 0..target {
-                let old_prob = probs[target_count][pity_count];
-
-                new_probs[target_count][pity_count + 1] += old_prob * (1. - rate);
-                new_probs[target_count][0] += old_prob * rate * (1. - subrate);
-                new_probs[target_count + 1][0] += old_prob * rate * subrate;
+    if focus {
+        let mut no_target = [0.; 249];
+        no_target[0] = 1.0;
+        // probabilities to get the target 6-star in exactly N rolls starting from 0 pity and 0 focus
+        let mut pdist_target_in_exactly_nrolls_with_focus = [0.; 249];
+        for i in 0..151 {
+            for j in 0..99 { 
+                let x = no_target[i]*pdist_6star_in_exactly_nrolls[j];
+                if i + j > 150 {
+                    pdist_target_in_exactly_nrolls_with_focus[i+j] += x;
+                }
+                else {
+                    pdist_target_in_exactly_nrolls_with_focus[i+j] += x*subrate;
+                    no_target[i+j] += x*(1.0-subrate);
+                }
             }
         }
-
-        // unlike direct re-assignment, swapping and filling avoids re-allocating memory
-        // update the `probs` matrix
-        swap(&mut probs, &mut new_probs);
-        // reset the `new_probs` matrix for the next pull
-        new_probs.fill([0.; 100]);
-
-        // There are two kinds of states that can reach probs[target][0]:
-        // - probs[target][p] (pulled an off-rate 6*, resetting pity to 0), or
-        // - probs[target - 1][p] (pulled a target 6*, increasing the target count by 1 and resetting pity to 0),
-        // where p is any pity count.
-        // However, we only update states in the matrix with target counts from 0 to target - 1,
-        // so states of the first kind are never considered in our calculations.
-        // This means that the probability at probs[target][0] is the probability that
-        // a state of the second kind got here (and the banner target was achieved) on this pull.
-        pdist.push(probs[target][0]);
+        
+        // probs[rolls][wins][focus]
+        // where focus: (0="unspent and counter at 0", 1="spent")
+        // only states where pity=0 are considered
+        let mut probs = vec![vec![[0.; 2]; target+1]; pulls + 1];
+        probs[0][0][0] = 1.0;
+    
+        for p in 0..pulls {
+            for t in 0..target {
+                // focus still active, hitting target without exhausting focus chance
+                for next in 1..151 {
+                    if p + next > pulls { break }
+                    probs[p+next][t+1][0] += probs[p][t][0] * pdist_target_in_exactly_nrolls_with_focus[next];
+                }
+                // focus still active, hitting target and exhausting focus chance
+                for next in 151..249 {
+                    if p + next > pulls { break }
+                    probs[p+next][t+1][1] += probs[p][t][0] * pdist_target_in_exactly_nrolls_with_focus[next];
+                }
+                // focus no longer active, relying on subrate to hit target
+                for next in 1..99 {
+                    if p + next > pulls { break }
+                    probs[p+next][t+1][1] += probs[p][t][1] * pdist_6star_in_exactly_nrolls[next] * subrate;
+                    probs[p+next][t][1] += probs[p][t][1] * pdist_6star_in_exactly_nrolls[next] * (1.0-subrate);
+                }
+            }
+        }
+        for p in 0..pulls {
+            pdist.push(probs[p][target][0]+probs[p][target][1]);
+        }
+    }
+    else {
+        // probs[rolls][wins]
+        // only states where pity=0 are considered
+        let mut probs = vec![vec![0.; target+1]; pulls + 1];
+        probs[0][0] = 1.0;
+    
+        for p in 0..pulls {
+            for t in 0..target {
+                // no focus, relying on subrate to hit target
+                for next in 1..99 {
+                    if p + next > pulls { break }
+                    probs[p+next][t+1] += probs[p][t] * pdist_6star_in_exactly_nrolls[next] * subrate;
+                    probs[p+next][t] += probs[p][t] * pdist_6star_in_exactly_nrolls[next] * (1.0-subrate);
+                }
+            }
+        }
+        for p in 0..pulls {
+            pdist.push(probs[p][target]);
+        }
     }
 
     pdist
@@ -84,7 +120,7 @@ pub fn calculate(banners: &[Banner], pulls: usize) -> Float {
         // we subtract the number of other banners to calculate `max_pulls`.
         let max_pulls = pulls + banner.bonus_pulls - (banners.len() - 1);
 
-        let pdist = banner_pdist(banner.target, max_pulls, banner.subrate);
+        let pdist = banner_pdist(banner.target, max_pulls, banner.subrate, false);
 
         conv_size += max_pulls;
         pdists.push(pdist);
