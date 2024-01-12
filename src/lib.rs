@@ -120,7 +120,7 @@ pub fn calculate(banners: &[Banner], pulls: usize) -> Float {
         // we subtract the number of other banners to calculate `max_pulls`.
         let max_pulls = pulls + banner.bonus_pulls - (banners.len() - 1);
 
-        let pdist = banner_pdist(banner.target, max_pulls, banner.subrate, false);
+        let pdist = banner_pdist(banner.target, max_pulls, banner.subrate, banner.has_focus);
 
         conv_size += max_pulls;
         pdists.push(pdist);
@@ -173,4 +173,5 @@ pub struct Banner {
     pub target: usize,
     pub subrate: Float,
     pub bonus_pulls: usize,
+    pub has_focus: bool,
 }
