@@ -27,7 +27,7 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float, focus: bool) -> Vec
     // probabilities that each pity level would be reached from 0 pity before getting reset
     let mut probs_pity_reached = [1.; 99];
     for i in 1..99 {
-        probs_pity_reached[i] = probs_pity_reached[i-1] * (1.0 - SIX_STAR_RATES[i]);
+        probs_pity_reached[i] = probs_pity_reached[i-1] * (1.0 - SIX_STAR_RATES[i-1]);
     }
 
     // probabilities to get the next any 6-star in exactly N rolls starting from 0 pity
@@ -42,7 +42,7 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float, focus: bool) -> Vec
         // probabilities to get the target 6-star in exactly N rolls starting from 0 pity and 0 focus
         let mut pdist_target_in_exactly_nrolls_with_focus = [0.; 249];
         for i in 0..151 {
-            for j in 0..99 { 
+            for j in 1..99 { 
                 let x = no_target[i]*pdist_6star_in_exactly_nrolls[j];
                 if i + j > 150 {
                     pdist_target_in_exactly_nrolls_with_focus[i+j] += x;
@@ -80,7 +80,7 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float, focus: bool) -> Vec
                 }
             }
         }
-        for p in 0..pulls {
+        for p in 1..pulls+1 {
             pdist.push(probs[p][target][0]+probs[p][target][1]);
         }
     }
@@ -100,7 +100,7 @@ fn banner_pdist(target: usize, pulls: usize, subrate: Float, focus: bool) -> Vec
                 }
             }
         }
-        for p in 0..pulls {
+        for p in 1..pulls+1 {
             pdist.push(probs[p][target]);
         }
     }
