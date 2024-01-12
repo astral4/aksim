@@ -15,11 +15,13 @@ fn target_1() -> Float {
             target: 1,
             subrate: 0.35,
             bonus_pulls: 24,
+            has_focus: false,
         },
         Banner {
             target: 1,
             subrate: 0.5,
             bonus_pulls: 0,
+            has_focus: false,
         },
     ];
 
@@ -35,11 +37,13 @@ fn target_10() -> Float {
             target: 10,
             subrate: 0.35,
             bonus_pulls: 240,
+            has_focus: false,
         },
         Banner {
             target: 10,
             subrate: 0.5,
             bonus_pulls: 0,
+            has_focus: false,
         },
     ];
 
