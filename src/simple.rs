@@ -118,8 +118,12 @@ pub fn calculate(banners: &[Banner], pulls: usize) -> Float {
     }
 
     // We apply the IFFT to get the convolved distribution.
-    // According to https://docs.rs/rustfft/6.1.0/rustfft/index.html#normalization,
+    // According to https://docs.rs/rustfft/6.2.0/rustfft/index.html#normalization,
     // the result needs to be divided by `conv_size` to get the actual convolution values.
+    // However, instead of dividing each element of the resulting sequence by `conv_size`
+    // and then summing the quotients to obtain the final probability,
+    // we can sum the elements and then divide the sum by `conv_size`.
+    // This reduces the number of operations needed and works because division is right-distributive over addition.
     let ifft = planner.plan_fft_inverse(conv_size);
     let mut combined_seq = ifft.make_output_vec();
     ifft.process(&mut combined_dft, &mut combined_seq).unwrap();
