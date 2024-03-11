@@ -66,20 +66,23 @@ However, these ranges don't account for the pity mechanism increasing the probab
 
 Our simulation must also keep track of the target character count so we know when the target is achieved.
 
-Here's what a computer program for this task might look like:
+Here's a computer program for calculating the probability of pulling the target character on an event banner within 50 pulls:
 
 ```rust
 // we use the `rand` crate to generate random numbers
 use rand::Rng;
-use rand::rngs::StdRng;
+use rand::thread_rng;
 
-const RUNS: u32 = 100000; // number of simulation runs
-const TARGET: u8 = 1; // target character count needed to achieve the target
+const RUNS: usize = 100000; // number of simulation runs
+const TARGET: usize = 1; // target character count needed to achieve the target
 const SUBRATE: f32 = 0.5;
+const MAX_PULLS: usize = 50;
 
 fn main() {
-    let mut rng = StdRng::from_entropy(); // initialize the random number generator
-    let mut pull_counts = Vec::new(); // initialize the list of pull counts for each run
+    // initialize the random number generator
+    let mut rng = thread_rng();
+
+    let mut successful_runs = 0; // the number of runs that achieved the target within `MAX_PULLS`
 
     // repeat the simulation `RUNS` times
     for _ in 0..RUNS {
@@ -98,24 +101,33 @@ fn main() {
 
             pulls += 1;
 
-            let r: f32 = rng.gen(); // generate a random number
+            // generate a random number
+            let r = rng.gen();
 
-            if r >= 0 && r < six_star_rate * SUBRATE {
+            if r < six_star_rate * SUBRATE {
                 // pulled the target character
                 target_count += 1;
                 pity_count = 0;
-            } else if r >= six_star_rate * SUBRATE && r < six_star_rate {
+            } else if r < six_star_rate {
                 // pulled a 6★ that wasn't the target character
                 pity_count = 0;
-            } else if r >= six_star_rate && r < 1 {
+            } else {
                 // didn't pull a 6★
                 pity_count += 1;
             }
         }
 
-        pull_counts.push(pulls); // record the number of pulls spent
+        if pulls <= MAX_PULLS {
+            successful_runs += 1;
+        }
     }
 
-    // analyze `pull_counts` after the simulation is over
+    // log the result
+    let probability = successful_runs as f32 / RUNS as f32;
+    println!("{probability}");
 }
 ```
+
+Running this produced the output `0.39429`, so the probability of pulling the target character on an event banner within 50 pulls is around $0.39429$. Randomness will cause subsequent runs to produce different results.
+
+This approach of repeated random sampling is called the Monte Carlo method. While this solution is relatively easy to implement and understand, it has some drawbacks. The biggest one is that the calculated probability is only an approximation. We can improve this approximation by simulating more runs, but we will never achieve an exact result this way. (Well, as exact as floating-point numbers can get.)
