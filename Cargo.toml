@@ -23,16 +23,16 @@ realfft = "3.3.0"
 divan = "0.1.14"
 
 [lints.rust]
-future_incompatible = "warn"
-unused = "warn"
+future_incompatible = { level = "warn", priority = -1 }
+unused = { level = "warn", priority = -1 }
 let_underscore_drop = "deny"
 macro_use_extern_crate = "deny"
 meta_variable_misuse = "deny"
 missing_abi = "deny"
 non_ascii_idents = "deny"
-nonstandard_style = "deny"
+nonstandard_style = { level = "deny", priority = -1 }
 noop_method_call = "deny"
-rust_2018_idioms = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
 trivial_casts = "deny"
 trivial_numeric_casts = "deny"
 unreachable_pub = "deny"
@@ -45,7 +45,7 @@ unused_results = "deny"
 incomplete_features = "allow"
 
 [lints.clippy]
-pedantic = "warn"
+pedantic = { level = "warn", priority = -1 }
 missing_panics_doc = "allow"
 module_name_repetitions = "allow"
 
